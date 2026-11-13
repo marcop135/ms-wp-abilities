@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Fixed (security): `create-post` and `apply-post-update` let any user with `edit_posts` publish. Both pass the status straight to `wp_insert_post()` or `wp_update_post()`, which check no capabilities, and their permission callbacks ask only for `edit_posts`, so a contributor, or an agent connected as one, could create or switch a post to `publish` or `private`. Both now refuse `publish`, `future` and `private` unless the user has the post type's `publish_posts`, the same rule as `WP_REST_Posts_Controller::handle_status_param()`, with a `cannot_publish` error. `draft` and `pending` are unchanged. A new test fails if any ability sets a post status without this check.
+
 ## 1.13.0 — 2026-10-18
 
 - Added: `create-post` takes an optional `author`, a user ID or username, so a post can be credited to the right person when it is created. Until now every post went to the account the MCP client connects as, and correcting it afterwards meant an update that also changed each post's modified date. Leave it out and nothing changes. Naming someone else follows the same rule as the WordPress REST API, permission to edit others' posts of that type, and the named user must be able to write that type, so a post cannot be credited to a subscriber. An unknown user is an error, never a silent fallback to the connected account. The audit trail records which author was requested.

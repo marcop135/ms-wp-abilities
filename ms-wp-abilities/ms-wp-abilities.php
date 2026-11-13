@@ -35,6 +35,7 @@ require_once plugin_dir_path( __FILE__ ) . 'includes/ability-fields.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/ability-audit-log.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/ability-catalog.php';
 require_once plugin_dir_path( __FILE__ ) . 'includes/post-author.php';
+require_once plugin_dir_path( __FILE__ ) . 'includes/post-status.php';
 
 add_action( 'init', 'mswpa_load_textdomain' );
 /**
@@ -523,6 +524,10 @@ function mswpa_register_abilities() {
 				}
 				$allowed  = array( 'draft', 'publish', 'pending', 'private' );
 				$status   = isset( $input['status'] ) && in_array( $input['status'], $allowed, true ) ? $input['status'] : 'draft';
+				$publish  = $type_obj ? $type_obj->cap->publish_posts : 'publish_posts';
+				if ( mswpa_status_requires_publish( $status ) && ! current_user_can( $publish ) ) {
+					return new WP_Error( 'cannot_publish', __( 'You do not have permission to publish posts of this type. Create it as a draft or pending instead.', 'ms-wp-abilities' ) );
+				}
 				if ( ! empty( $input['markdown'] ) ) {
 					$post_content = mswpa_markdown_to_blocks( $input['markdown'] );
 				} elseif ( isset( $input['content'] ) ) {
@@ -852,6 +857,11 @@ function mswpa_register_abilities() {
 				if ( isset( $raw['status'] ) ) {
 					$allowed = array( 'publish', 'draft', 'pending', 'private' );
 					if ( in_array( $raw['status'], $allowed, true ) ) {
+						$type_obj = get_post_type_object( $post->post_type );
+						$publish  = $type_obj ? $type_obj->cap->publish_posts : 'publish_posts';
+						if ( mswpa_status_requires_publish( $raw['status'] ) && ! current_user_can( $publish ) ) {
+							return new WP_Error( 'cannot_publish', __( 'You do not have permission to publish posts of this type.', 'ms-wp-abilities' ) );
+						}
 						$args['post_status'] = $raw['status'];
 						$updated[] = 'status';
 					}
